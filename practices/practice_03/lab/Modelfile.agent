@@ -1,4 +1,11 @@
+# Та же модель под агентный режим OpenCode.
+# Системный промпт здесь НЕ задаётся: он приходит из demo/repo-system.txt
+# через opencode.json, иначе два промпта наложатся друг на друга.
 FROM qwen3.5:4b
-PARAMETER num_ctx 65536
-PARAMETER temperature 0.2
 
+PARAMETER temperature 0.2
+PARAMETER seed 42
+
+# Агент читает файлы своими инструментами, и прочитанное попадает в контекст.
+# 4096 на это не хватает, поэтому отдельная сборка с большим окном.
+PARAMETER num_ctx 65536
