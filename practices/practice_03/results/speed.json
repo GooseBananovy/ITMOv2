@@ -1,0 +1,33 @@
+{
+  "model": "qwen3.5:4b",
+  "fixed_options": {
+    "temperature": 0.2,
+    "seed": 42,
+    "num_ctx": 4096,
+    "num_predict": 2048
+  },
+  "cold": {
+    "wall_seconds": 22.37,
+    "load_seconds": 7.57,
+    "decode_tokens_per_second": 9.48
+  },
+  "warm_runs": [
+    {
+      "wall_seconds": 10.63,
+      "load_seconds": 0.01,
+      "decode_tokens_per_second": 9.48
+    },
+    {
+      "wall_seconds": 10.56,
+      "load_seconds": 0.0,
+      "decode_tokens_per_second": 9.44
+    },
+    {
+      "wall_seconds": 10.71,
+      "load_seconds": 0.01,
+      "decode_tokens_per_second": 9.45
+    }
+  ],
+  "warm_median_tokens_per_second": 9.45,
+  "units": "tokens/second on decode, seconds wall-clock"
+}

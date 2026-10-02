@@ -1,0 +1,52 @@
+{
+  "request": {
+    "model": "qwen3.5:4b",
+    "messages": [
+      {
+        "role": "system",
+        "content": "Ты помощник по учебному проекту. Используй только переданный контекст.\nНе выдумывай CI, зависимости, функции или настройки.\nЕсли данных нет, напиши «В предоставленных материалах нет ответа».\nФормат: короткий ответ, затем основание из контекста.\n\n"
+      },
+      {
+        "role": "user",
+        "content": "Материалы проекта (номер строки перед каждой строкой):\n\n=== demo/README.md ===\n1: # Notify Mini\n2: Учебный сервис подписки. Подписчики хранятся в памяти процесса.\n3: В service.py функция subscribe добавляет непустое имя в множество.\n4: Повторное добавление имени не создаёт дубликат.\n5: \n6: Проверка: make test.\n7: Зависимости: стандартная библиотека Python 3.10+.\n8: \n\n=== demo/Makefile ===\n1: .PHONY: test\n2: test:\n3: \tpython3 -m unittest -v\n4: \n\n=== demo/service.py ===\n1: subscribers = set()\n2: \n3: \n4: def subscribe(name):\n5:     if not name.strip():\n6:         raise ValueError(\"empty name\")\n7:     subscribers.add(name.strip())\n8:     return {\"subscribed\": True}\n9: \n\n=== demo/test_service.py ===\n1: import unittest\n2: from service import subscribe, subscribers\n3: \n4: \n5: class SubscribeTest(unittest.TestCase):\n6:     def setUp(self):\n7:         subscribers.clear()\n8: \n9:     def test_subscribe(self):\n10:         self.assertEqual(subscribe(\"Ann\"), {\"subscribed\": True})\n11:         self.assertEqual(subscribers, {\"Ann\"})\n12: \n13:     def test_empty(self):\n14:         with self.assertRaises(ValueError):\n15:             subscribe(\" \")\n16: \n17:     def test_duplicate(self):\n18:         subscribe(\"Ann\")\n19:         subscribe(\"Ann\")\n20:         self.assertEqual(len(subscribers), 1)\n21: \n22: \n23: if __name__ == \"__main__\":\n24:     unittest.main()\n25: \n\nВопрос: Как запустить тесты? Укажи файл-источник."
+      }
+    ],
+    "stream": false,
+    "think": false,
+    "options": {
+      "temperature": 0.2,
+      "seed": 42,
+      "num_ctx": 4096,
+      "num_predict": 2048
+    }
+  },
+  "response": {
+    "model": "qwen3.5:4b",
+    "created_at": "2026-10-02T16:57:48.361466917Z",
+    "message": {
+      "role": "assistant",
+      "content": "Запустить тесты можно командой `make test` в корне проекта или напрямую через `python3 -m unittest`.\n\n**Основание:**\n*   В файле **demo/Makefile** (строки 2–3) определена цель `test`, которая запускает `python3 -m unittest -v`.\n*   В файле **demo/test_service.py** (строка 24) указан запуск модуля `unittest.main()`."
+    },
+    "done": true,
+    "done_reason": "stop",
+    "total_duration": 13363766362,
+    "load_duration": 5435848,
+    "prompt_eval_count": 521,
+    "prompt_eval_cached_count": 0,
+    "prompt_eval_duration": 3583080000,
+    "eval_count": 97,
+    "eval_duration": 9521637000
+  },
+  "wall_seconds": 13.37,
+  "load_seconds": 0.01,
+  "prompt_tokens": 521,
+  "generated_tokens": 97,
+  "decode_tokens_per_second": 10.19,
+  "done_reason": "stop",
+  "cell": "syson-thinkoff",
+  "question_number": 1,
+  "question": "Как запустить тесты? Укажи файл-источник.",
+  "system_prompt_used": true,
+  "think": false,
+  "control_question": false
+}
