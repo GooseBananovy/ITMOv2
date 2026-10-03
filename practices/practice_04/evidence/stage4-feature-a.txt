@@ -1,0 +1,56 @@
+Этап 4: фича A поручена агенту. 3 октября 2026, opencode 2.0.22,
+модель anthropic/claude-sonnet-5 через VseLLM.
+
+1. Вызов skill (первое действие агента в сессии):
+
+   > build · anthropic/claude-sonnet-5
+   → Skill "Review Acceptance"
+   → Read docs/requirements.md
+   → Read tests/test_review.py
+   → Read .opencode/skills/review-acceptance/references/writing-tests.md
+
+   Skill загружен и reference прочитан - не просто папка на диске.
+
+2. Агент отказался подделывать падающий тест:
+
+      Раз реализация и тесты уже проходят на чистом дереве, я не могу честно показать «падающий 
+   тест до реализации» — писать тест, который сразу зелёный, было бы нарушением процедуры (п.3 
+   skill: «тест, который падает на текущем коде»).
+      Поскольку официального «red» шага здесь быть не может (реализация уже верна), я проверю, что 
+   новые тесты действительно что-то проверяют — временно сломаю код, покажу падение, затем верну 
+   как было.
+
+3. Вместо этого - мутационная проверка (показ падения на сломанном коде):
+
+   test_rejects_oversized_diff_counted_in_bytes_not_characters (tests.test_review.ReviewDiffTest.test_rejects_ove
+   test_rejects_oversized_diff_without_calling_model (tests.test_review.ReviewDiffTest.test_rejects_oversized_dif
+   test_rejects_whitespace_only_diff_without_calling_model (tests.test_review.ReviewDiffTest.test_rejects_whitesp
+   test_returns_model_answer (tests.test_review.ReviewDiffTest.test_returns_model_answer) ... ok
+   test_sends_diff_to_model (tests.test_review.ReviewDiffTest.test_sends_diff_to_model) ... ok
+   test_duplicate (tests.test_subscribe.SubscribeTest.test_duplicate) ... ok
+   test_empty (tests.test_subscribe.SubscribeTest.test_empty) ... ok
+   test_subscribe (tests.test_subscribe.SubscribeTest.test_subscribe) ... ok
+   
+   ======================================================================
+   FAIL: test_rejects_oversized_diff_counted_in_bytes_not_characters (tests.test_review.ReviewDiffTest.test_rejec
+   ----------------------------------------------------------------------
+   Traceback (most recent call last):
+     File "/home/yokko/Projects/ITMOv2/practices/practice_04/tests/test_review.py", line 49, in test_rejects_over
+       result = review_diff(oversized, client=ExplodingClient())
+     File "/home/yokko/Projects/ITMOv2/practices/practice_04/app/review.py", line 36, in review_diff
+       review = client.complete(SYSTEM, PROMPT.format(diff=diff))
+     File "/home/yokko/Projects/ITMOv2/practices/practice_04/tests/test_review.py", line 22, in complete
+       raise AssertionError("модель не должна вызываться при отказе")
+   AssertionError: модель не должна вызываться при отказе
+   
+   ----------------------------------------------------------------------
+   Ran 10 tests in 0.003s
+   
+   FAILED (failures=1)
+
+   2. **Доказал содержательность** нового теста на подсчёт байт: временно заменил 
+   `len(diff.encode("utf-8"))` на `len(diff)` в `app/review.py:28` и прогнал тесты — 
+   `test_rejects_oversized_diff_counted_in_bytes_not_characters` упал с `AssertionError: модель не 
+   должна вызываться при отказе` (т.к. при счёте по символам дифф из 4097 символов `"ы"` не 
+   признавался слишком большим и уходил в `ExplodingClient`). Затем вернул код к исходному виду 
+   (проверено `diff` — идентичен).

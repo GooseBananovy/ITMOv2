@@ -1,7 +1,8 @@
 """Ревью диффа локальной моделью.
 
-Базовое состояние до фич A и B: дифф уходит в модель как есть, ожидание не
-ограничено, ошибки зависимости наружу идут исключениями.
+Фича A реализована: отказы валидации входа не доходят до модели. Фича B ещё
+не реализована: ожидание не ограничено, ошибки зависимости наружу идут
+исключениями.
 """
 
 from app.ollama_client import OllamaClient
@@ -14,8 +15,23 @@ SYSTEM = (
 
 PROMPT = "Проведи ревью этого диффа:\n\n{diff}"
 
+MAX_DIFF_BYTES = 8192
+
 
 def review_diff(diff, client=None):
+    if not diff.strip():
+        return {
+            "status": "rejected",
+            "code": "empty_diff",
+            "message": "дифф пустой или состоит только из пробелов",
+        }
+    if len(diff.encode("utf-8")) > MAX_DIFF_BYTES:
+        return {
+            "status": "rejected",
+            "code": "diff_too_large",
+            "message": f"дифф больше {MAX_DIFF_BYTES} байт",
+        }
+
     client = client or OllamaClient()
     review = client.complete(SYSTEM, PROMPT.format(diff=diff))
     return {"status": "ok", "review": review}

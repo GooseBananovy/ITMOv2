@@ -2,7 +2,7 @@ const WATCHED = new Set(["edit", "write", "patch"])
 const RUNNER_TIMEOUT_MS = 120000
 
 const PROJECT_DIR = new URL("../..", import.meta.url).pathname.replace(/\/$/, "")
-const LOG_PATH = PROJECT_DIR + "/evidence/hook-runs.log"
+const LOG_PATH = PROJECT_DIR + "/evidence/hook-runs.txt"
 
 async function runCheck() {
   const { spawnSync } = await import("node:child_process")
