@@ -37,10 +37,14 @@ export default {
           ? "Проверка проекта зелёная."
           : "Проверка проекта красная. Исправь причину, раннер ослаблять нельзя.")
 
-      if (event.result && typeof event.result.output === "string") {
-        event.result.output += note
-      } else if (event.result) {
-        event.result.output = String(event.result.output ?? "") + note
+      const parts = Array.isArray(event.result?.content) ? event.result.content : []
+      const output = typeof event.result?.output === "string" ? event.result.output : ""
+
+      event.result = {
+        ...event.result,
+        output: output + note,
+        content: [...parts, { type: "text", text: note }],
+        metadata: { ...(event.result?.metadata ?? {}), checkAfterEdit: verdict },
       }
     })
   },
