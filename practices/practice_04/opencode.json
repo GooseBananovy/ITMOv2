@@ -1,0 +1,23 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "ollama/itmo-agent:latest",
+  "small_model": "ollama/itmo-agent:latest",
+  "provider": {
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama local",
+      "options": {
+        "baseURL": "http://localhost:11434/v1"
+      },
+      "models": {
+        "itmo-agent": {
+          "name": "ITMO local 64k",
+          "limit": {
+            "context": 65536,
+            "output": 4096
+          }
+        }
+      }
+    }
+  }
+}
