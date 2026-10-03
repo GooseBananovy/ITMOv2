@@ -11,6 +11,7 @@ import urllib.request
 
 DEFAULT_URL = "http://localhost:11434"
 DEFAULT_MODEL = "itmo-local:latest"
+REVIEW_TIMEOUT_SECONDS = 30
 
 OPTIONS = {
     "temperature": 0.2,
@@ -41,6 +42,6 @@ class OllamaClient:
             data=json.dumps(payload).encode("utf-8"),
             headers={"Content-Type": "application/json"},
         )
-        with urllib.request.urlopen(request) as response:
+        with urllib.request.urlopen(request, timeout=REVIEW_TIMEOUT_SECONDS) as response:
             body = json.loads(response.read().decode("utf-8"))
         return body["message"]["content"]

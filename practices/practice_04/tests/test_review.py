@@ -1,4 +1,7 @@
+import http.client
+import socket
 import unittest
+import urllib.error
 
 from app.review import MAX_DIFF_BYTES, review_diff
 
@@ -20,6 +23,75 @@ class ExplodingClient:
 
     def complete(self, system, user):
         raise AssertionError("модель не должна вызываться при отказе")
+
+
+class TimeoutClient:
+    """Клиент, имитирующий истечение ожидания ответа модели."""
+
+    def complete(self, system, user):
+        raise socket.timeout("timed out")
+
+
+class UnavailableClient:
+    """Клиент, имитирующий отсутствие соединения с моделью."""
+
+    def complete(self, system, user):
+        raise urllib.error.URLError("connection refused")
+
+
+class HttpErrorClient:
+    """Клиент, имитирующий HTTP-ошибку модели."""
+
+    def complete(self, system, user):
+        raise urllib.error.HTTPError(
+            "http://localhost:11434/api/chat", 500, "Internal Server Error", None, None
+        )
+
+
+class BadResponseClient:
+    """Клиент, имитирующий ответ без ожидаемых полей."""
+
+    def complete(self, system, user):
+        raise KeyError("message")
+
+
+class IncompleteReadClient:
+    """Клиент, имитирующий обрыв соединения посреди ответа.
+
+    Сервер объявил Content-Length, но прислал меньше байт и закрыл
+    соединение — urllib поднимает http.client.IncompleteRead.
+    """
+
+    def complete(self, system, user):
+        raise http.client.IncompleteRead(b"partial")
+
+
+class BadStatusLineClient:
+    """Клиент, имитирующий нераспознаваемую стартовую строку HTTP-ответа."""
+
+    def complete(self, system, user):
+        raise http.client.BadStatusLine("garbage")
+
+
+class RemoteDisconnectedClient:
+    """Клиент, имитирующий разрыв соединения сервером без ответа.
+
+    http.client.RemoteDisconnected наследуется и от HTTPException, и от
+    ConnectionResetError (а значит, и от OSError) — неоднозначный случай,
+    который проверяет выбор ветки в review_diff.
+    """
+
+    def complete(self, system, user):
+        raise http.client.RemoteDisconnected(
+            "Remote end closed connection without response"
+        )
+
+
+class TransportErrorClient:
+    """Клиент, имитирующий транспортную ошибку ОС, не относящуюся к HTTP."""
+
+    def complete(self, system, user):
+        raise ConnectionRefusedError("connection refused by OS")
 
 
 class ReviewDiffTest(unittest.TestCase):
@@ -68,6 +140,56 @@ class ReviewDiffTest(unittest.TestCase):
         system, user = client.calls[0]
         self.assertIn("ревьюер", system)
         self.assertIn("+print(1)", user)
+
+    def test_returns_model_timeout_when_wait_expires(self):
+        result = review_diff("+print(1)", client=TimeoutClient())
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "model_timeout")
+        self.assertTrue(result["message"])
+
+    def test_returns_model_unavailable_when_connection_fails(self):
+        result = review_diff("+print(1)", client=UnavailableClient())
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "model_unavailable")
+        self.assertTrue(result["message"])
+
+    def test_returns_model_http_error_when_model_responds_with_http_error(self):
+        result = review_diff("+print(1)", client=HttpErrorClient())
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "model_http_error")
+        self.assertTrue(result["message"])
+
+    def test_returns_model_bad_response_when_fields_are_missing(self):
+        result = review_diff("+print(1)", client=BadResponseClient())
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "model_bad_response")
+        self.assertTrue(result["message"])
+
+    def test_returns_model_bad_response_when_connection_breaks_mid_read(self):
+        result = review_diff("+print(1)", client=IncompleteReadClient())
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "model_bad_response")
+        self.assertTrue(result["message"])
+
+    def test_returns_model_bad_response_when_status_line_is_unparseable(self):
+        result = review_diff("+print(1)", client=BadStatusLineClient())
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "model_bad_response")
+        self.assertTrue(result["message"])
+
+    def test_returns_model_bad_response_when_remote_disconnects_without_response(self):
+        # RemoteDisconnected — одновременно HTTPException и OSError;
+        # правило классификации отдаёт приоритет протокольной ветке.
+        result = review_diff("+print(1)", client=RemoteDisconnectedClient())
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "model_bad_response")
+        self.assertTrue(result["message"])
+
+    def test_returns_model_unavailable_when_transport_error_occurs(self):
+        result = review_diff("+print(1)", client=TransportErrorClient())
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "model_unavailable")
+        self.assertTrue(result["message"])
 
 
 if __name__ == "__main__":
