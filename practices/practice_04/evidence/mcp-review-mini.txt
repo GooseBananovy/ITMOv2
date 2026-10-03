@@ -1,0 +1,32 @@
+Подключение и вызов собственного MCP-сервера. 3 октября 2026, opencode 2.0.22.
+
+1. Подключение (из логов сервера, --log-level debug):
+
+   message="mcp connected" server=review-mini tools=1
+   directory=/home/yokko/Projects/ITMOv2/practices/practice_04
+   connectionID=3594d5a0-68c3-452d-a980-3f5a2788e5bc
+
+2. Вызов агентом. Инструмент получает имя с префиксом сервера:
+
+   $ opencode run --standalone "Вызови MCP-инструмент review_diff сервера
+     review-mini с таким значением diff: ... Покажи ответ дословно."
+
+   > У меня есть прямой доступ к инструменту `review-mini_review_diff`.
+   ⚙ review-mini_review_diff {"diff":"--- a/app/pay.py\n+++ b/app/pay.py\n@@\n
+     -def charge(amount):\n-    return gateway.charge(amount)\n+def charge(amount):\n
+     +    return gateway.charge(round(float(amount)))\n"}
+
+   Ответ инструмента:
+   {
+     "status": "ok",
+     "review": "Нарушение принципа открытости/закрытости (Open/Closed Principle):
+       функция `charge` не должна зависеть от реализации округления внутри
+       вызываемого метода. Округление должно быть вынесено в отдельную функцию
+       или аргумент, чтобы `gateway.charge()` мог принимать любые значения,
+       включая дробные числа."
+   }
+
+   1 минута 8 секунд на весь прогон, включая запуск сервера через uv.
+
+Замечание модели относится именно к присланному диффу. Ревью даёт локальная
+модель из практики 3, то есть практика 3 стала инструментом практики 4.
