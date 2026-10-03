@@ -19,5 +19,22 @@
         }
       }
     }
+  },
+  "mcp": {
+    "servers": {
+      "review-mini": {
+        "type": "local",
+        "command": [
+          "sh",
+          "mcp/serve.sh"
+        ],
+        "cwd": "practices/practice_04"
+      },
+      "context7": {
+        "type": "remote",
+        "url": "https://mcp.context7.com/mcp",
+        "oauth": false
+      }
+    }
   }
 }
