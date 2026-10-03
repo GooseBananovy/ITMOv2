@@ -1,12 +1,3 @@
-#!/usr/bin/env python3
-"""Полная сетка 2x2 по шести вопросам на локальной модели через Ollama.
-
-Условия прогона зафиксированы в preregistration.md до первого запуска.
-Только стандартная библиотека: lab/Makefile проверяет это при install.
-
-Авторский lab/experiment.py не заменяется и не изменяется: в нём вопрос
-захардкожен (lab/experiment.py:21), поэтому остальные пять он задать не может.
-"""
 import argparse
 import json
 import re
@@ -20,9 +11,6 @@ LAB = ROOT / "lab"
 CONTEXT_FILES = ["demo/README.md", "demo/Makefile", "demo/service.py", "demo/test_service.py"]
 ENDPOINT = "http://localhost:11434/api/chat"
 
-# Шестой вопрос — собственная инициатива, контроль на подсказку. Обоснование в
-# preregistration.md. Намеренно не содержит ни слова из запретного списка
-# system.txt, ни оговорки «если сведений нет».
 CONTROL_QUESTION = "Под какой лицензией распространяется этот сервис? Укажи файл-источник."
 
 CELLS = {
@@ -34,9 +22,7 @@ CELLS = {
 
 FIXED = {"temperature": 0.2, "seed": 42, "num_ctx": 4096, "num_predict": 2048}
 
-
 def load_questions():
-    """Пять вопросов читаем из lab/QUESTIONS.md дословно, а не копией в коде."""
     text = (LAB / "QUESTIONS.md").read_text(encoding="utf-8")
     found = []
     for line in text.splitlines():
@@ -48,7 +34,6 @@ def load_questions():
         raise SystemExit(f"Ожидались вопросы 1-5, разобрано: {[n for n, _ in found]}")
     return [q for _, q in found] + [CONTROL_QUESTION]
 
-
 def build_context():
     parts = []
     for rel in CONTEXT_FILES:
@@ -56,7 +41,6 @@ def build_context():
         body = "\n".join(f"{i}: {l}" for i, l in enumerate(lines, 1))
         parts.append(f"=== {rel} ===\n{body}")
     return "Материалы проекта (номер строки перед каждой строкой):\n\n" + "\n\n".join(parts)
-
 
 def ask(model, context, question, use_system, think):
     messages = []
@@ -81,7 +65,6 @@ def ask(model, context, question, use_system, think):
         "decode_tokens_per_second": round(answer.get("eval_count", 0) / (eval_ns / 1e9), 2) if eval_ns else None,
         "done_reason": answer.get("done_reason"),
     }
-
 
 def run_matrix(model, out_dir, force):
     questions = load_questions()
@@ -112,9 +95,7 @@ def run_matrix(model, out_dir, force):
         (out_dir / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\nготово, файлов в {out_dir}: {len(list(out_dir.glob('*__q*.json')))}")
 
-
 def run_speed(model, out_dir, repeats):
-    """Холодный старт отдельно от прогретых: это величины разной природы."""
     context = build_context()
     question = load_questions()[0]
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -139,7 +120,6 @@ def run_speed(model, out_dir, repeats):
     (out_dir / "speed.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\nмедиана прогретых: {summary['warm_median_tokens_per_second']} ток/с")
 
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", default="qwen3.5:4b",
@@ -154,7 +134,6 @@ def main():
         run_matrix(args.model, out_dir, args.force)
     else:
         run_speed(args.model, out_dir, args.repeats)
-
 
 if __name__ == "__main__":
     main()
