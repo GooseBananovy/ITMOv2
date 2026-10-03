@@ -1,0 +1,29 @@
+Подключение внешнего MCP Context7 и полезный ответ. 3 октября 2026.
+
+Подключение (лог сервера):
+
+  message="mcp connected" server=context7 tools=2
+  directory=/home/yokko/Projects/ITMOv2/practices/practice_04
+  connectionID=41648aed-ac9b-46af-b0f3-81f9d3c2dc45   (2,9 с)
+
+Вопрос задавал не ради демонстрации, а тот, который реально был нужен фиче B:
+
+  $ opencode run --standalone "Через context7 найди, как в стандартной
+    библиотеке Python задать таймаут для urllib.request.urlopen. use context7.
+    Ответь одной строкой и укажи источник."
+
+  ⚙ context7_resolve-library-id {"libraryName":"Python",
+      "query":"urllib.request.urlopen timeout parameter"}
+  ⚙ context7_query-docs {"libraryId":"/python/cpython",
+      "query":"urllib.request.urlopen timeout parameter"}
+
+  Таймаут задаётся параметром `timeout` (в секундах) при вызове
+  urllib.request.urlopen(url, timeout=3) - при превышении выбрасывается
+  URLError. Источник: Context7 /python/cpython -> Doc/library/urllib.request.rst
+
+Два вызова: сначала разрешение имени библиотеки, потом запрос к документации.
+Ответ с указанием файла-источника, а не пересказ по памяти.
+
+Важное уточнение к более раннему выводу: зависание старта сессии на 240 секунд
+вызывал не Context7, а мой неверный cwd у локального сервера review-mini.
+Context7 подключается за три секунды.
