@@ -1,5 +1,5 @@
 ---
-name: Review Acceptance
+name: review-acceptance
 description: Процедура сдачи фичи в review-mini: падающий тест, минимальная реализация, доверенный раннер и машинная проверка запретов проекта
 ---
 
