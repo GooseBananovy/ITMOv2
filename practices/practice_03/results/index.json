@@ -1,0 +1,194 @@
+[
+  {
+    "cell": "sysoff-thinkoff",
+    "question_number": 1,
+    "wall_seconds": 11.89,
+    "generated_tokens": 87,
+    "decode_tokens_per_second": 10.11,
+    "done_reason": "stop"
+  },
+  {
+    "cell": "sysoff-thinkoff",
+    "question_number": 2,
+    "wall_seconds": 27.36,
+    "generated_tokens": 234,
+    "decode_tokens_per_second": 9.62,
+    "done_reason": "stop"
+  },
+  {
+    "cell": "sysoff-thinkoff",
+    "question_number": 3,
+    "wall_seconds": 29.37,
+    "generated_tokens": 256,
+    "decode_tokens_per_second": 9.73,
+    "done_reason": "stop"
+  },
+  {
+    "cell": "sysoff-thinkoff",
+    "question_number": 4,
+    "wall_seconds": 12.48,
+    "generated_tokens": 93,
+    "decode_tokens_per_second": 9.84,
+    "done_reason": "stop"
+  },
+  {
+    "cell": "sysoff-thinkoff",
+    "question_number": 5,
+    "wall_seconds": 43.34,
+    "generated_tokens": 383,
+    "decode_tokens_per_second": 9.51,
+    "done_reason": "stop"
+  },
+  {
+    "cell": "sysoff-thinkoff",
+    "question_number": 6,
+    "wall_seconds": 17.79,
+    "generated_tokens": 125,
+    "decode_tokens_per_second": 9.15,
+    "done_reason": "stop"
+  },
+  {
+    "cell": "syson-thinkoff",
+    "question_number": 1,
+    "wall_seconds": 13.37,
+    "generated_tokens": 97,
+    "decode_tokens_per_second": 10.19,
+    "done_reason": "stop"
+  },
+  {
+    "cell": "syson-thinkoff",
+    "question_number": 2,
+    "wall_seconds": 14.77,
+    "generated_tokens": 109,
+    "decode_tokens_per_second": 9.82,
+    "done_reason": "stop"
+  },
+  {
+    "cell": "syson-thinkoff",
+    "question_number": 3,
+    "wall_seconds": 11.58,
+    "generated_tokens": 74,
+    "decode_tokens_per_second": 10.05,
+    "done_reason": "stop"
+  },
+  {
+    "cell": "syson-thinkoff",
+    "question_number": 4,
+    "wall_seconds": 14.53,
+    "generated_tokens": 93,
+    "decode_tokens_per_second": 9.52,
+    "done_reason": "stop"
+  },
+  {
+    "cell": "syson-thinkoff",
+    "question_number": 5,
+    "wall_seconds": 18.59,
+    "generated_tokens": 133,
+    "decode_tokens_per_second": 9.49,
+    "done_reason": "stop"
+  },
+  {
+    "cell": "syson-thinkoff",
+    "question_number": 6,
+    "wall_seconds": 9.37,
+    "generated_tokens": 47,
+    "decode_tokens_per_second": 9.23,
+    "done_reason": "stop"
+  },
+  {
+    "cell": "sysoff-thinkon",
+    "question_number": 1,
+    "wall_seconds": 223.62,
+    "generated_tokens": 2048,
+    "decode_tokens_per_second": 9.34,
+    "done_reason": "length"
+  },
+  {
+    "cell": "sysoff-thinkon",
+    "question_number": 2,
+    "wall_seconds": 124.33,
+    "generated_tokens": 1114,
+    "decode_tokens_per_second": 9.22,
+    "done_reason": "stop"
+  },
+  {
+    "cell": "sysoff-thinkon",
+    "question_number": 3,
+    "wall_seconds": 94.33,
+    "generated_tokens": 835,
+    "decode_tokens_per_second": 9.18,
+    "done_reason": "stop"
+  },
+  {
+    "cell": "sysoff-thinkon",
+    "question_number": 4,
+    "wall_seconds": 92.78,
+    "generated_tokens": 885,
+    "decode_tokens_per_second": 10.11,
+    "done_reason": "stop"
+  },
+  {
+    "cell": "sysoff-thinkon",
+    "question_number": 5,
+    "wall_seconds": 121.67,
+    "generated_tokens": 1191,
+    "decode_tokens_per_second": 10.09,
+    "done_reason": "stop"
+  },
+  {
+    "cell": "sysoff-thinkon",
+    "question_number": 6,
+    "wall_seconds": 208.08,
+    "generated_tokens": 2048,
+    "decode_tokens_per_second": 9.88,
+    "done_reason": "length"
+  },
+  {
+    "cell": "syson-thinkon",
+    "question_number": 1,
+    "wall_seconds": 204.5,
+    "generated_tokens": 1874,
+    "decode_tokens_per_second": 9.37,
+    "done_reason": "stop"
+  },
+  {
+    "cell": "syson-thinkon",
+    "question_number": 2,
+    "wall_seconds": 167.81,
+    "generated_tokens": 1657,
+    "decode_tokens_per_second": 10.13,
+    "done_reason": "stop"
+  },
+  {
+    "cell": "syson-thinkon",
+    "question_number": 3,
+    "wall_seconds": 205.33,
+    "generated_tokens": 2048,
+    "decode_tokens_per_second": 10.18,
+    "done_reason": "length"
+  },
+  {
+    "cell": "syson-thinkon",
+    "question_number": 4,
+    "wall_seconds": 114.24,
+    "generated_tokens": 1120,
+    "decode_tokens_per_second": 10.12,
+    "done_reason": "stop"
+  },
+  {
+    "cell": "syson-thinkon",
+    "question_number": 5,
+    "wall_seconds": 161.13,
+    "generated_tokens": 1562,
+    "decode_tokens_per_second": 9.91,
+    "done_reason": "stop"
+  },
+  {
+    "cell": "syson-thinkon",
+    "question_number": 6,
+    "wall_seconds": 128.68,
+    "generated_tokens": 1247,
+    "decode_tokens_per_second": 9.96,
+    "done_reason": "stop"
+  }
+]
