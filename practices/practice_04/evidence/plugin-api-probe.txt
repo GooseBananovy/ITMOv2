@@ -1,0 +1,41 @@
+Проба API плагинов OpenCode 2.0.15, 3 октября 2026.
+В .opencode/plugins/ положены два файла сразу: probe-plain.js (плоский объект)
+и probe-define.js (как в официальной миграции, с import из @opencode/plugin).
+
+Вывод лога:
+
+    [plain] setup, ctx keys: app,location,options,agent,aisdk,command,event,experimental,generate,model,provider,integration,mcp,permission,plugin,reference,rpc,skill,storage,tool,vcs,websearch,worktree,session,shell
+    [plain] location: {"directory":"/home/yokko/Projects/ITMOv2/practices/practice_04","project":{"id":"ee064bbcd2bf4a8927936c966b21bc5f56027720","directory":"/home/yokko/Projects/ITMOv2","canonical":"/home/yokko/Projects/ITMOv2"}}
+    [plain] hook registered
+    [plain] setup, ctx keys: app,location,options,agent,aisdk,command,event,experimental,generate,model,provider,integration,mcp,permission,plugin,reference,rpc,skill,storage,tool,vcs,websearch,worktree,session,shell
+    [plain] location: {"directory":"/home/yokko/Projects/ITMOv2/practices/practice_04","project":{"id":"ee064bbcd2bf4a8927936c966b21bc5f56027720","directory":"/home/yokko/Projects/ITMOv2","canonical":"/home/yokko/Projects/ITMOv2"}}
+    [plain] hook registered
+    [plain] setup, ctx keys: app,location,options,agent,aisdk,command,event,experimental,generate,model,provider,integration,mcp,permission,plugin,reference,rpc,skill,storage,tool,vcs,websearch,worktree,session,shell
+    [plain] location: {"directory":"/home/yokko/Projects/ITMOv2/practices/practice_04","project":{"id":"ee064bbcd2bf4a8927936c966b21bc5f56027720","directory":"/home/yokko/Projects/ITMOv2","canonical":"/home/yokko/Projects/ITMOv2"}}
+    [plain] hook registered
+    [plain] shell: hook type=object
+    [plain] tool: reload|list|transform|hook
+    [plain] skill: list|transform|reload
+    [plain] mcp: list|transform|reload
+    [plain] agent: get|list|transform|reload
+    [plain] shell: hook type=object
+    [plain] tool: reload|list|transform|hook
+    [plain] skill: list|transform|reload
+    [plain] mcp: list|transform|reload
+    [plain] agent: get|list|transform|reload
+
+Выводы:
+
+1. От [define] нет ни строки: import { Plugin } from "@opencode/plugin" в 2.0.15
+   не резолвится. Виртуальным модулем бинарь отдаёт только @opencode/plugin/tui.
+   Рабочая форма - плоский объект: export default { id, async setup(ctx) }.
+2. Строка tool.execute.after (V1 API) в бинаре отсутствует вовсе, тогда как
+   execute.after и execute.before есть. Документация на opencode.ai/docs/plugins
+   описывает V1 и для 2.0.15 неприменима.
+3. ctx.shell содержит только hook - запускать им команды нельзя, раннер
+   вызывается через node:child_process.
+4. ctx.location.directory - каталог практики, ctx.location.project.directory -
+   корень git-репозитория. Путь до раннера поэтому вычисляется от самого файла
+   плагина, а не от текущего каталога.
+5. setup вызывается дважды за один запуск сервера, поэтому hook не копит
+   состояние.

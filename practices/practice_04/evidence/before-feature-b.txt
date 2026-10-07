@@ -1,0 +1,7 @@
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+Снято 3 октября 2026 на базовом состоянии review-mini, до фичи B.
+Ollama была остановлена (systemctl is-active ollama -> inactive).
+Наружу уходит urllib.error.URLError, вызывающий код получает исключение,
+а не ответ по контракту. Это то, что фича B обязана превратить в
+{"status": "error", "code": "model_unavailable", "message": "<причина>"}.

@@ -1,0 +1,27 @@
+Проверка собственного skill review-acceptance: ловит ли его скрипт нарушения.
+3 октября 2026.
+
+Нарочно сломал четыре правила разом: добавил пустую строку в docs/requirements.md,
+импорт requests в app/review.py, отладочный print( туда же.
+
+$ sh .opencode/skills/review-acceptance/scripts/acceptance.sh
+FAIL  sh scripts/check.sh красный
+      ModuleNotFoundError: No module named 'requests'
+FAIL  docs/requirements.md изменён, а его менять нельзя без поручения
+ok    scripts/check.sh не менялся
+ok    app/subscribe.py не менялся
+ok    practices/practice_03 не тронут
+FAIL  добавлены импорты вне стандартной библиотеки: requests
+FAIL  в app/ добавлено 1 отладочных print(
+
+ИТОГ: сдавать нельзя, см. FAIL выше
+код выхода: 1
+
+После git checkout -- docs/requirements.md app/review.py:
+
+ИТОГ: можно сдавать
+код выхода: 0
+
+Все четыре нарушения поймано. Проверка, которая умеет говорить только "ok",
+доказательством не является, поэтому прогон на сломанном состоянии сделан
+специально.

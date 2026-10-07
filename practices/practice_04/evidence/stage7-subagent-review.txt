@@ -1,0 +1,30 @@
+Этап 7: отдельное ревью фичи B субагентом @explore. 3 октября 2026.
+
+Вызов:
+  opencode run --standalone "@explore Проверь дифф фичи B по требованиям
+    docs/requirements.md и docs/style-guide.md. Назови только подтверждённые
+    проблемы, с указанием файла и строки. Файлы не меняй."
+
+Субагент не ограничился чтением: он поднял локальный HTTP-сервер и
+воспроизвёл обрыв соединения.
+
+ПОДТВЕРЖДЁННАЯ ПРОБЛЕМА (app/review.py:39-65):
+
+  Сервер отвечает заголовком Content-Length: 100, но обрывает соединение,
+  не досылая тело. urllib.request.urlopen поднимает http.client.IncompleteRead,
+  которого в цепочке except нет:
+
+    UNCAUGHT EXCEPTION PROPAGATED: <class 'http.client.IncompleteRead'>
+    IncompleteRead(0 bytes read, 100 more expected)
+
+  Нарушены docs/requirements.md:49 (наружу исключения не пробрасываются) и
+  docs/style-guide.md правило 2.
+
+Проверенные и пройденные сценарии: таймаут при соединении, таймаут при чтении
+тела, ConnectionRefusedError, HTTP 500, KeyError/TypeError/ValueError при
+разборе JSON. Сценарии фичи A сохранены, все 14 тестов зелёные.
+
+МОЁ РЕШЕНИЕ: замечание принято. http.client.HTTPException добавляется в
+цепочку except и относится к коду model_bad_response - это усечённый ответ
+модели, то есть ответ не того вида, которого мы ждём. Контракт не меняю:
+новый код ошибки заводить не стал, подходящий уже есть.
