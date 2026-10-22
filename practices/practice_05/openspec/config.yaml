@@ -14,6 +14,10 @@ context: |
   сохраняются, если change явно не говорит обратное. В тестах сеть не
   используется: клиент модели подставляется параметром client.
 
+rules:
+  design:
+    - Объясни взаимодействие диаграммой Mermaid (sequenceDiagram в блоке ```mermaid); текст решений сохраняй рядом с диаграммой.
+
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.
 # Example:
