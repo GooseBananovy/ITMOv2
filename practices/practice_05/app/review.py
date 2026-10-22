@@ -22,6 +22,35 @@ PROMPT = "Проведи ревью этого диффа:\n\n{diff}"
 MAX_DIFF_BYTES = 8192
 
 
+def _count_diff_stats(diff):
+    """Детерминированно считает число файлов, добавленных и удалённых строк.
+
+    Заголовком файла считается строка "--- X", сразу за которой следует
+    строка "+++ Y" — такая пара увеличивает files и не входит в
+    added/removed. Любая другая строка, начинающаяся с "+", увеличивает
+    added; любая другая строка, начинающаяся с "-", увеличивает removed.
+    """
+    lines = diff.splitlines()
+    files = added = removed = 0
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if (
+            line.startswith("--- ")
+            and i + 1 < len(lines)
+            and lines[i + 1].startswith("+++ ")
+        ):
+            files += 1
+            i += 2
+            continue
+        if line.startswith("+"):
+            added += 1
+        elif line.startswith("-"):
+            removed += 1
+        i += 1
+    return {"files": files, "added": added, "removed": removed}
+
+
 def review_diff(diff, client=None):
     if not diff.strip():
         return {
@@ -44,6 +73,7 @@ def review_diff(diff, client=None):
             "status": "error",
             "code": "model_timeout",
             "message": f"модель не ответила за {REVIEW_TIMEOUT_SECONDS} секунд",
+            "stats": _count_diff_stats(diff),
         }
     except urllib.error.HTTPError as error:
         error.close()
@@ -51,12 +81,14 @@ def review_diff(diff, client=None):
             "status": "error",
             "code": "model_http_error",
             "message": f"модель ответила ошибкой HTTP {error.code}",
+            "stats": _count_diff_stats(diff),
         }
     except urllib.error.URLError as error:
         return {
             "status": "error",
             "code": "model_unavailable",
             "message": f"не удалось установить соединение с моделью: {error.reason}",
+            "stats": _count_diff_stats(diff),
         }
     # http.client.RemoteDisconnected наследуется и от HTTPException, и от
     # OSError (через ConnectionResetError): ветка HTTPException стоит раньше
@@ -67,17 +99,20 @@ def review_diff(diff, client=None):
             "status": "error",
             "code": "model_bad_response",
             "message": f"ответ модели нарушает протокол HTTP: {error}",
+            "stats": _count_diff_stats(diff),
         }
     except OSError as error:
         return {
             "status": "error",
             "code": "model_unavailable",
             "message": f"не удалось установить соединение с моделью: {error}",
+            "stats": _count_diff_stats(diff),
         }
     except (KeyError, TypeError, ValueError) as error:
         return {
             "status": "error",
             "code": "model_bad_response",
             "message": f"ответ модели не содержит ожидаемых полей: {error}",
+            "stats": _count_diff_stats(diff),
         }
-    return {"status": "ok", "review": review}
+    return {"status": "ok", "review": review, "stats": _count_diff_stats(diff)}

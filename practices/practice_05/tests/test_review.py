@@ -101,6 +101,10 @@ class ReviewDiffTest(unittest.TestCase):
         self.assertEqual(result["code"], "empty_diff")
         self.assertTrue(result["message"])
 
+    def test_rejected_empty_diff_has_no_stats_key(self):
+        result = review_diff("", client=ExplodingClient())
+        self.assertNotIn("stats", result)
+
     def test_rejects_whitespace_only_diff_without_calling_model(self):
         result = review_diff("   \n\t  ", client=ExplodingClient())
         self.assertEqual(result["status"], "rejected")
@@ -113,6 +117,11 @@ class ReviewDiffTest(unittest.TestCase):
         self.assertEqual(result["status"], "rejected")
         self.assertEqual(result["code"], "diff_too_large")
         self.assertTrue(result["message"])
+
+    def test_rejected_oversized_diff_has_no_stats_key(self):
+        oversized = "a" * (MAX_DIFF_BYTES + 1)
+        result = review_diff(oversized, client=ExplodingClient())
+        self.assertNotIn("stats", result)
 
     def test_rejects_oversized_diff_counted_in_bytes_not_characters(self):
         # "ы" занимает 2 байта в UTF-8: символов меньше MAX_DIFF_BYTES,
@@ -131,7 +140,34 @@ class ReviewDiffTest(unittest.TestCase):
     def test_returns_model_answer(self):
         client = FakeClient("нет проверки входа")
         result = review_diff("--- a\n+++ b\n+print(1)\n", client=client)
-        self.assertEqual(result, {"status": "ok", "review": "нет проверки входа"})
+        self.assertEqual(
+            result,
+            {
+                "status": "ok",
+                "review": "нет проверки входа",
+                "stats": {"files": 1, "added": 1, "removed": 0},
+            },
+        )
+
+    def test_returns_stats_for_successful_review(self):
+        diff = "--- a/x.py\n+++ b/x.py\n+print(1)\n-print(2)\n"
+        result = review_diff(diff, client=FakeClient())
+        self.assertEqual(result["stats"], {"files": 1, "added": 1, "removed": 1})
+
+    def test_removed_line_without_file_header_is_not_counted_as_file(self):
+        # "--- x" без следующей "+++ ..." — это удалённая строка контента
+        # (например, удалённый SQL-комментарий "-- x"), а не заголовок файла.
+        result = review_diff("--- x\n", client=FakeClient())
+        self.assertEqual(result["stats"], {"files": 0, "added": 0, "removed": 1})
+
+    def test_standalone_plus_plus_plus_line_is_counted_as_added(self):
+        # Одиночная "+++ y" без предшествующей "--- X" — добавленная строка.
+        result = review_diff("+++ y\n", client=FakeClient())
+        self.assertEqual(result["stats"], {"files": 0, "added": 1, "removed": 0})
+
+    def test_returns_zero_stats_when_diff_has_no_recognizable_markers(self):
+        result = review_diff("just text\nmore text\n", client=FakeClient())
+        self.assertEqual(result["stats"], {"files": 0, "added": 0, "removed": 0})
 
     def test_sends_diff_to_model(self):
         client = FakeClient()
@@ -147,11 +183,19 @@ class ReviewDiffTest(unittest.TestCase):
         self.assertEqual(result["code"], "model_timeout")
         self.assertTrue(result["message"])
 
+    def test_returns_stats_when_model_times_out(self):
+        result = review_diff("+print(1)\n-print(2)\n", client=TimeoutClient())
+        self.assertEqual(result["stats"], {"files": 0, "added": 1, "removed": 1})
+
     def test_returns_model_unavailable_when_connection_fails(self):
         result = review_diff("+print(1)", client=UnavailableClient())
         self.assertEqual(result["status"], "error")
         self.assertEqual(result["code"], "model_unavailable")
         self.assertTrue(result["message"])
+
+    def test_returns_stats_when_model_unavailable(self):
+        result = review_diff("+print(1)\n-print(2)\n", client=UnavailableClient())
+        self.assertEqual(result["stats"], {"files": 0, "added": 1, "removed": 1})
 
     def test_returns_model_http_error_when_model_responds_with_http_error(self):
         result = review_diff("+print(1)", client=HttpErrorClient())
@@ -159,11 +203,19 @@ class ReviewDiffTest(unittest.TestCase):
         self.assertEqual(result["code"], "model_http_error")
         self.assertTrue(result["message"])
 
+    def test_returns_stats_when_model_http_error(self):
+        result = review_diff("+print(1)\n-print(2)\n", client=HttpErrorClient())
+        self.assertEqual(result["stats"], {"files": 0, "added": 1, "removed": 1})
+
     def test_returns_model_bad_response_when_fields_are_missing(self):
         result = review_diff("+print(1)", client=BadResponseClient())
         self.assertEqual(result["status"], "error")
         self.assertEqual(result["code"], "model_bad_response")
         self.assertTrue(result["message"])
+
+    def test_returns_stats_when_model_bad_response(self):
+        result = review_diff("+print(1)\n-print(2)\n", client=BadResponseClient())
+        self.assertEqual(result["stats"], {"files": 0, "added": 1, "removed": 1})
 
     def test_returns_model_bad_response_when_connection_breaks_mid_read(self):
         result = review_diff("+print(1)", client=IncompleteReadClient())
@@ -185,11 +237,21 @@ class ReviewDiffTest(unittest.TestCase):
         self.assertEqual(result["code"], "model_bad_response")
         self.assertTrue(result["message"])
 
+    def test_returns_stats_when_remote_disconnects_without_response(self):
+        result = review_diff(
+            "+print(1)\n-print(2)\n", client=RemoteDisconnectedClient()
+        )
+        self.assertEqual(result["stats"], {"files": 0, "added": 1, "removed": 1})
+
     def test_returns_model_unavailable_when_transport_error_occurs(self):
         result = review_diff("+print(1)", client=TransportErrorClient())
         self.assertEqual(result["status"], "error")
         self.assertEqual(result["code"], "model_unavailable")
         self.assertTrue(result["message"])
+
+    def test_returns_stats_when_transport_error_occurs(self):
+        result = review_diff("+print(1)\n-print(2)\n", client=TransportErrorClient())
+        self.assertEqual(result["stats"], {"files": 0, "added": 1, "removed": 1})
 
 
 if __name__ == "__main__":
