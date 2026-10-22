@@ -69,6 +69,46 @@ HTTP 200 с телом JSON, отражающим `status`. HTTP-слой код
 пришлось бы различать "мой запрос неверен" от "модель недоступна" по
 HTTP-коду вместо поля `status`, которое уже есть в контракте.
 
+Ниже — последовательность вызовов для всех веток: маршрутизация (GET /,
+POST /api/review, прочее), а внутри POST /api/review — валидация тела
+(400) и три исхода `review_diff` (`ok`, `rejected`, `error`).
+
+```mermaid
+sequenceDiagram
+    participant B as Браузер
+    participant S as HTTP-сервер
+    participant R as review_diff
+    participant M as Модель (OllamaClient)
+
+    B->>S: HTTP-запрос
+    alt GET /
+        S-->>B: 200, HTML-страница
+    else POST /api/review
+        alt Невалидное тело (не JSON / diff не строка)
+            S-->>B: 400, без вызова review_diff
+        else Валидное тело
+            S->>R: review_diff(diff)
+            alt Успех
+                R->>M: client.complete(system, user)
+                M-->>R: текст ревью
+                R-->>S: {"status": "ok", "review": "...", "stats": {...}}
+                S-->>B: 200, тело = результат review_diff
+            else Отказ валидации входа (rejected)
+                Note over R: модель не вызывается
+                R-->>S: {"status": "rejected", "code": "...", "message": "..."}
+                S-->>B: 200, тело = результат review_diff
+            else Ошибка зависимости модели (error)
+                R->>M: client.complete(system, user)
+                M-->>R: таймаут / недоступность / HTTP-ошибка / bad response
+                R-->>S: {"status": "error", "code": "model_*", "message": "...", "stats": {...}}
+                S-->>B: 200, тело = результат review_diff
+            end
+        end
+    else Другой метод или путь
+        S-->>B: 404, без вызова review_diff
+    end
+```
+
 **HTML/JS отдаются как встроенная в код сервера строка, без шаблонизатора
 и без отдельного HTTP-сервера статики.**
 Почему: одна страница, без параметризации по пользователю — шаблонизатор
