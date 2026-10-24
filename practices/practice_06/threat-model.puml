@@ -6,7 +6,7 @@ skinparam defaultTextAlignment center
 
 actor "Клиент\n(alice, bob)" as Customer
 actor "Сотрудник\n(staff)" as Staff
-actor "Автор отзыва\n(любой клиент)" as Reviewer
+actor "Аноним\n(токена нет)" as Anon
 
 rectangle "Граница доверия 1: клиентская сторона (недоверенная)" as TB1 {
   rectangle "HTTP-клиент\nзаголовки, query, JSON" as Client
@@ -32,7 +32,7 @@ rectangle "Граница доверия 4: AI-помощник (вне проц
 
 Customer --> Client
 Staff --> Client
-Reviewer --> Client
+Anon --> Client
 Client --> Http : запросы (X-Token, X-Role, query, JSON)
 Http --> Core
 Core --> Db : SQL
@@ -46,8 +46,8 @@ Exec --> Private : read_file / delete_tree
 Exec --> Db : export_profiles
 
 note right of Reviews
-  Отзыв — недоверенный текст,
-  который попадает и в HTML-страницу,
+  Отзыв — недоверенный текст (писать может
+  и аноним), попадает в HTML-страницу
   и в prompt модели
 end note
 

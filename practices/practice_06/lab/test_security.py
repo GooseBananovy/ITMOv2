@@ -4,6 +4,7 @@ All identities and data are synthetic; the shop runs in-process or on 127.0.0.1.
 """
 
 import json
+import socket
 import threading
 import unittest
 from http.server import ThreadingHTTPServer
@@ -82,6 +83,19 @@ class AccessControlTest(ShopCase):
     def test_t06_files_requires_login(self):
         self.assertEqual(self.request("GET", "/files?user=alice&path=receipt.txt")[0], 401)
 
+    def test_t17_search_and_assistant_context_require_login(self):
+        for path in ("/search?q=TEST", "/assistant/context?order_id=1"):
+            with self.subTest(path=path):
+                status, result = self.request("GET", path)
+                self.assertEqual(status, 401)
+                self.assertNotIn("TEST_", json.dumps(result))
+
+    def test_t07_logs_hold_no_passwords_from_login_bodies(self):
+        self.login()
+        self.request("POST", "/login", {"username": "alice", "password": "wrong-password-probe"})
+        self.assertNotIn("wrong-password-probe", json.dumps(self.shop.logs))
+        self.assertNotIn("wrong-password-probe", json.dumps(self.shop.audit))
+
     def test_t07_debug_logs_not_public_and_without_secrets(self):
         alice = self.login()
         self.request("GET", "/profile?id=1", headers=alice)
@@ -139,6 +153,24 @@ class InjectionTest(ShopCase):
         self.assertIn("delete_tree", prompt)  # the review text is still shown as data
 
 
+class PromptScopeTest(ShopCase):
+    def test_t09_prompt_has_only_reviews_of_the_ordered_product(self):
+        auth = self.login()
+        self.request("POST", "/reviews", {"product": "lamp", "text": "LAMP-REVIEW-PROBE"}, auth)
+        self.request("POST", "/reviews", {"product": "chair", "text": "CHAIR-REVIEW-PROBE"}, auth)
+        prompt = self.request("GET", "/assistant/context?order_id=1", headers=auth)[1]["prompt"]
+        self.assertIn("CHAIR-REVIEW-PROBE", prompt)
+        self.assertNotIn("LAMP-REVIEW-PROBE", prompt)
+
+    def test_t09_prompt_review_count_is_bounded(self):
+        auth = self.login()
+        for i in range(60):
+            self.request("POST", "/reviews", {"product": "chair", "text": f"REVIEW-{i:03d}"}, auth)
+        prompt = self.request("GET", "/assistant/context?order_id=1", headers=auth)[1]["prompt"]
+        self.assertEqual(prompt.count("REVIEW-"), 20)
+        self.assertIn("REVIEW-059", prompt)
+
+
 class IntegrityTest(ShopCase):
     def test_t05_price_comes_from_catalog(self):
         status, order = self.request("POST", "/orders", {"product": "chair", "price": 1}, self.login())
@@ -168,7 +200,7 @@ class AssistantTest(ShopCase):
                 self.assertNotIn(SECRET, json.dumps(result))
                 self.assertNotIn("TEST_BOB", json.dumps(result))
 
-    def test_t10_execute_requires_login(self):
+    def test_t18_execute_requires_login(self):
         self.assertEqual(self.execute({}, "read_file", path="files/alice/receipt.txt")[0], 401)
 
     def test_t11_customer_cannot_export_profiles(self):
@@ -182,11 +214,13 @@ class AssistantTest(ShopCase):
 
     def test_t12_nobody_deletes_files_through_assistant(self):
         for user in ("alice", "staff"):
-            with self.subTest(user=user):
-                status, _ = self.execute(self.login(user), "delete_tree", path="files")
-                self.assertIn(status, (400, 403))
-                self.assertTrue(self.shop.sandbox.path("files/bob/receipt.txt").exists())
-                self.assertTrue(self.shop.sandbox.path("files/alice/receipt.txt").exists())
+            for path in ("files", ".", "private"):
+                with self.subTest(user=user, path=path):
+                    status, _ = self.execute(self.login(user), "delete_tree", path=path)
+                    self.assertIn(status, (400, 403))
+                    self.assertTrue(self.shop.sandbox.root.exists())
+                    self.assertTrue(self.shop.sandbox.path("files/bob/receipt.txt").exists())
+                    self.assertTrue(self.shop.sandbox.path("private/operator-note.txt").exists())
 
     def test_t12_malformed_decision_is_400(self):
         auth = self.login()
@@ -217,10 +251,35 @@ class SessionTest(ShopCase):
         self.assertNotIn("learn-alice", text)
 
 
+class ResourceLimitTest(ShopCase):
+    def test_t20_reviews_are_bounded(self):
+        auth = self.login()
+        for i in range(250):
+            self.request("POST", "/reviews", {"product": "chair", "text": f"r{i}"}, auth)
+        self.assertEqual(len(self.shop.reviews), 200)
+
+    def test_t20_sessions_are_bounded(self):
+        for _ in range(1100):
+            self.login()
+        self.assertLessEqual(len(self.shop.sessions), 1000)
+
+    def test_t20_expired_sessions_are_purged(self):
+        old = self.login()
+        self.shop.sessions[old["X-Token"]]["expires"] = 0
+        self.login()
+        self.assertNotIn(old["X-Token"], self.shop.sessions)
+
+    def test_t20_request_log_is_bounded(self):
+        for _ in range(1100):
+            self.request("GET", "/health")
+        self.assertLessEqual(len(self.shop.logs), 1000)
+
+
 class HttpHardeningTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.shop = Shop()
+        cls.shop.request_timeout = 0.5
         cls.server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(cls.shop))
         cls.server.daemon_threads = True
         threading.Thread(target=cls.server.serve_forever, daemon=True).start()
@@ -251,6 +310,12 @@ class HttpHardeningTest(unittest.TestCase):
         status, body = self.call("POST", "/login", b"[1, 2]", {"Content-Type": "application/json"})
         self.assertEqual(status, 400)
         self.assertNotIn("AttributeError", body)
+
+    def test_t20_stalled_request_is_cut_off(self):
+        with socket.create_connection(("127.0.0.1", self.server.server_port), timeout=5) as conn:
+            conn.sendall(b"POST /login HTTP/1.0\r\nContent-Length: 100\r\n\r\n{")
+            answer = conn.recv(4096)  # a stalled client gets an answer once the timeout fires; before, it hung
+        self.assertIn(b" 408 ", answer.split(b"\r\n", 1)[0])
 
     def test_t14_bad_content_length_is_400(self):
         status, body = self.call("POST", "/login", b"{}", {"Content-Length": "abc"})

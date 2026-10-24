@@ -27,6 +27,8 @@ LOGIN_WINDOW = 60
 MAX_REVIEWS = 200
 MAX_REVIEW_TEXT = 1000
 MAX_LOG = 1000
+MAX_SESSIONS = 1000
+REQUEST_TIMEOUT = 10
 SAFE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}")
 
 
@@ -59,6 +61,7 @@ class Shop:
         self.reviews = []
         self.logs = []
         self.audit = []
+        self.request_timeout = REQUEST_TIMEOUT
 
     def rows(self, query, params=()):
         return [dict(row) for row in self.db.execute(query, params)]
@@ -73,6 +76,13 @@ class Shop:
             del self.sessions[token]
             return None
         return session
+
+    def purge_sessions(self, now):
+        """Memory is bounded: expired sessions go first, then the oldest ones."""
+        for token in [t for t, s in self.sessions.items() if s["expires"] <= now]:
+            del self.sessions[token]
+        for token in list(self.sessions)[:max(0, len(self.sessions) - MAX_SESSIONS + 1)]:
+            del self.sessions[token]
 
     def record(self, session, action, outcome):
         """Audit trail: who did what with what result. Never tokens, passwords or request bodies."""
@@ -96,6 +106,7 @@ class Shop:
             self.record(None, "login_failed", username[:64])
             return error(401, "invalid credentials")
         self.failures.pop(username, None)
+        self.purge_sessions(now)
         token = uuid.uuid4().hex
         self.sessions[token] = {"user": username, "id": account[1], "role": account[2], "expires": now + SESSION_TTL}
         self.record(self.sessions[token], "login", "ok")
@@ -209,7 +220,7 @@ class Shop:
             return error(404, "not found")
         if orders[0]["owner"] != session["id"] and session["role"] != "staff":
             return error(403, "forbidden")
-        reviews = [{"product": r["product"], "text": r["text"]} for r in self.reviews]
+        reviews = [{"text": r["text"]} for r in self.reviews if r["product"] == orders[0]["product"]][-20:]
         prompt = (
             "Ты помощник магазина. Прочитай заказ и верни JSON с полями tool и arguments.\n"
             "Инструменты: read_file(path) — только чек владельца заказа; export_profiles() — только сотрудник.\n"
@@ -254,6 +265,8 @@ class Shop:
 
 def make_handler(shop):
     class Handler(BaseHTTPRequestHandler):
+        timeout = shop.request_timeout  # a client that stalls mid-request does not hold a thread forever
+
         def handle_request(self):
             try:
                 try:
@@ -275,6 +288,8 @@ def make_handler(shop):
                     else:
                         with shop.lock:
                             status, result = shop.dispatch(self.command, self.path, body, self.headers)
+            except TimeoutError:
+                status, result = error(408, "request timeout")
             except Exception:  # noqa: BLE001 - details go to the server console, never to the client
                 traceback.print_exc(file=sys.stderr)
                 status, result = error(500, "internal error")

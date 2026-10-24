@@ -100,4 +100,20 @@ check("T14", "в ошибке видны внутренности", s == 500 and
 s, b = call("POST", "/orders", {}, alice)
 check("T15", "пустое тело → необработанная ошибка (500)", s == 500, f"HTTP {s}, тело: {b[:60]}")
 
-print(f"\nПодтверждено: {sum(c for _, c in results)} из {len(results)} проверок (T16 — отсутствие журнала действий — проверяется тестом)")
+call("POST", "/login", {"username": "alice", "password": "wrong-password-probe"})
+s, b = call("GET", "/debug/logs")
+check("T07b", "пароль из тела /login виден в журнале", s == 200 and "wrong-password-probe" in b, f"HTTP {s}, пароль в журнале: {'wrong-password-probe' in b}")
+
+s, b = call("GET", "/search?q=TEST")
+check("T17a", "поиск профилей без входа", s == 200 and "TEST_" in b, f"HTTP {s}")
+s, b = call("GET", "/assistant/context?order_id=2")
+check("T17b", "контекст помощника без входа", s == 200 and "lamp" in b, f"HTTP {s}")
+
+s, b = call("POST", "/assistant/execute", {"decision": {"tool": "read_file", "arguments": {"path": "private/operator-note.txt"}}})
+check("T18", "инструменты помощника без входа", s == 200 and SECRET in b, f"HTTP {s}")
+
+s, b = execute(alice, "delete_tree", path=".")
+s2, _ = call("GET", "/files?user=alice&path=receipt.txt", headers=alice)
+check("T19", "delete_tree удаляет корень песочницы", s == 200 and s2 != 200, f"удаление HTTP {s}, свой чек после: HTTP {s2}")
+
+print(f"\nПодтверждено: {sum(c for _, c in results)} из {len(results)} проверок (T16 журнал действий и T20 пределы памяти — только тестами)")
