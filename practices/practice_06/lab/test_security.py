@@ -99,7 +99,7 @@ class InjectionTest(ShopCase):
 
     def test_t03_search_is_not_sql(self):
         auth = self.login()
-        for q in ("x' OR '1'='1", "' UNION SELECT id, email, address, name FROM profiles WHERE id=2 --"):
+        for q in ("x' OR 1=1 --", "' UNION SELECT id, email, address, name FROM profiles WHERE id=2 --"):
             with self.subTest(q=q):
                 status, result = self.request("GET", "/search?q=" + q.replace(" ", "%20"), headers=auth)
                 self.assertNotIn("TEST_BOB", json.dumps(result))

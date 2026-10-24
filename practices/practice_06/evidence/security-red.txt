@@ -1,4 +1,4 @@
-FFFFF.FFFFFFFFFFF.FFFFFFFFFFFFFFFF.FFFFFFFE
+FFFFF.FFFFFFFFFFF.FFFFFFFFFFFFFFFFF.FFFFFFFE
 ======================================================================
 ERROR: test_t16_actions_are_audited_without_secrets (test_security.SessionTest.test_t16_actions_are_audited_without_secrets)
 ----------------------------------------------------------------------
@@ -261,6 +261,15 @@ Traceback (most recent call last):
 AssertionError: 'TEST_BOB' unexpectedly found in '[{"id": 2, "name": "TEST_BOB", "email": "bob@example.invalid", "address": "TEST_ADDRESS_B"}]'
 
 ======================================================================
+FAIL: test_t03_search_is_not_sql (test_security.InjectionTest.test_t03_search_is_not_sql) (q="x' OR 1=1 --")
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yokko/Projects/ITMOv2/practices/practice_06/lab/test_security.py", line 105, in test_t03_search_is_not_sql
+    self.assertNotIn("TEST_BOB", json.dumps(result))
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'TEST_BOB' unexpectedly found in '[{"id": 1, "name": "TEST_ALICE", "email": "alice@example.invalid", "address": "TEST_ADDRESS_A"}, {"id": 2, "name": "TEST_BOB", "email": "bob@example.invalid", "address": "TEST_ADDRESS_B"}]'
+
+======================================================================
 FAIL: test_t03_search_is_not_sql (test_security.InjectionTest.test_t03_search_is_not_sql) (q="' UNION SELECT id, email, address, name FROM profiles WHERE id=2 --")
 ----------------------------------------------------------------------
 Traceback (most recent call last):
@@ -367,6 +376,6 @@ Traceback (most recent call last):
 AssertionError: 200 != 401
 
 ----------------------------------------------------------------------
-Ran 32 tests in 0.600s
+Ran 32 tests in 0.613s
 
-FAILED (failures=39, errors=1)
+FAILED (failures=40, errors=1)
