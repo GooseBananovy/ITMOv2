@@ -27,7 +27,9 @@ LOGIN_WINDOW = 60
 MAX_REVIEWS = 200
 MAX_REVIEW_TEXT = 1000
 MAX_LOG = 1000
-MAX_SESSIONS = 1000
+MAX_SESSIONS_PER_USER = 10
+MAX_TRACKED_NAMES = 1000
+LOOPBACK_HOSTS = ("127.0.0.1", "localhost")
 REQUEST_TIMEOUT = 10
 SAFE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}")
 
@@ -77,12 +79,26 @@ class Shop:
             return None
         return session
 
-    def purge_sessions(self, now):
-        """Memory is bounded: expired sessions go first, then the oldest ones."""
+    def purge_sessions(self, now, user):
+        """Memory is bounded: expired sessions go first, then the caller's own oldest ones.
+
+        The limit is per account, so one customer cannot evict the staff token or lock others out.
+        """
         for token in [t for t, s in self.sessions.items() if s["expires"] <= now]:
             del self.sessions[token]
-        for token in list(self.sessions)[:max(0, len(self.sessions) - MAX_SESSIONS + 1)]:
+        own = [t for t, s in self.sessions.items() if s["user"] == user]
+        for token in own[:max(0, len(own) - MAX_SESSIONS_PER_USER + 1)]:
             del self.sessions[token]
+
+    def note_failure(self, username, now):
+        """Count a failed login for any name, known or not, so the answer does not reveal which names exist."""
+        recent = [t for t in self.failures.get(username, []) if now - t < LOGIN_WINDOW]
+        if username not in self.failures and len(self.failures) >= MAX_TRACKED_NAMES:
+            for name in [n for n, times in self.failures.items() if all(now - t >= LOGIN_WINDOW for t in times)]:
+                del self.failures[name]
+            if len(self.failures) >= MAX_TRACKED_NAMES:
+                del self.failures[next(iter(self.failures))]
+        self.failures[username] = recent + [now]
 
     def record(self, session, action, outcome):
         """Audit trail: who did what with what result. Never tokens, passwords or request bodies."""
@@ -95,18 +111,19 @@ class Shop:
         if not isinstance(username, str) or not isinstance(password, str):
             return error(400, "username and password must be strings")
         now = time.time()
+        username = username[:64]
         recent = [t for t in self.failures.get(username, []) if now - t < LOGIN_WINDOW]
         if len(recent) >= LOGIN_ATTEMPTS:
             self.failures[username] = recent
-            self.record(None, "login_blocked", username[:64])
+            self.record(None, "login_blocked", username)
             return error(429, "too many attempts, try later")
         account = self.accounts.get(username)
         if not account or not hmac.compare_digest(password.encode(), account[0].encode()):
-            self.failures[username] = recent + [now]
+            self.note_failure(username, now)
             self.record(None, "login_failed", username[:64])
             return error(401, "invalid credentials")
         self.failures.pop(username, None)
-        self.purge_sessions(now)
+        self.purge_sessions(now, username)
         token = uuid.uuid4().hex
         self.sessions[token] = {"user": username, "id": account[1], "role": account[2], "expires": now + SESSION_TTL}
         self.record(self.sessions[token], "login", "ok")
@@ -273,11 +290,18 @@ def make_handler(shop):
                     size = int(self.headers.get("Content-Length", "0"))
                 except ValueError:
                     size = -2
-                if size == -2:
+                host = self.headers.get("Host")
+                # A web page in the owner's browser can reach 127.0.0.1; a rebinding page sends its own Host.
+                if host is not None and host not in {f"{name}:{self.server.server_port}" for name in LOOPBACK_HOSTS}:
+                    status, result = error(403, "forbidden host")
+                elif size == -2:
                     status, result = error(400, "invalid Content-Length")
                 elif not 0 <= size <= 65536:
                     self.send_error(413)
                     return
+                elif size and self.headers.get_content_type() != "application/json":
+                    # text/plain and form posts are the "simple" cross-site requests that skip a preflight
+                    status, result = error(415, "Content-Type must be application/json")
                 else:
                     try:
                         body = json.loads(self.rfile.read(size)) if size else {}

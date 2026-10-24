@@ -9,7 +9,7 @@ actor "Сотрудник\n(staff)" as Staff
 actor "Аноним\n(токена нет)" as Anon
 
 rectangle "Граница доверия 1: клиентская сторона (недоверенная)" as TB1 {
-  rectangle "HTTP-клиент\nзаголовки, query, JSON" as Client
+  rectangle "HTTP-клиент или браузер (любая вкладка)\nзаголовки Host, Content-Type, X-Token, query, JSON" as Client
 }
 
 rectangle "Граница доверия 2: процесс Mini Shop (127.0.0.1:8066)" as TB2 {

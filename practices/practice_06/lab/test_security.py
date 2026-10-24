@@ -235,6 +235,14 @@ class SessionTest(ShopCase):
             self.assertEqual(self.request("POST", "/login", {"username": "alice", "password": "wrong"})[0], 401)
         self.assertEqual(self.request("POST", "/login", {"username": "alice", "password": "learn-alice"})[0], 429)
 
+    def test_t13_unknown_names_are_limited_like_known_ones(self):
+        for _ in range(5):
+            self.assertEqual(self.request("POST", "/login", {"username": "nobody", "password": "x"})[0], 401)
+        self.assertEqual(self.request("POST", "/login", {"username": "nobody", "password": "x"})[0], 429)
+
+    def test_t21_non_ascii_password_is_401_not_500(self):
+        self.assertEqual(self.request("POST", "/login", {"username": "alice", "password": "пароль-пробный"})[0], 401)
+
     def test_t13_token_expires(self):
         auth = self.login()
         self.shop.sessions[auth["X-Token"]]["expires"] = 0
@@ -258,10 +266,21 @@ class ResourceLimitTest(ShopCase):
             self.request("POST", "/reviews", {"product": "chair", "text": f"r{i}"}, auth)
         self.assertEqual(len(self.shop.reviews), 200)
 
-    def test_t20_sessions_are_bounded(self):
-        for _ in range(1100):
+    def test_t20_sessions_are_bounded_per_account(self):
+        for _ in range(50):
             self.login()
-        self.assertLessEqual(len(self.shop.sessions), 1000)
+        self.assertEqual(sum(s["user"] == "alice" for s in self.shop.sessions.values()), 10)
+
+    def test_t20_one_customer_cannot_evict_the_staff_session(self):
+        staff = self.login("staff")
+        for _ in range(50):
+            self.login()
+        self.assertEqual(self.request("GET", "/admin/export", headers=staff)[0], 200)
+
+    def test_t20_failed_login_tracking_is_bounded(self):
+        for i in range(1500):
+            self.request("POST", "/login", {"username": f"ghost-{i}", "password": "x"})
+        self.assertLessEqual(len(self.shop.failures), 1000)
 
     def test_t20_expired_sessions_are_purged(self):
         old = self.login()
@@ -313,9 +332,26 @@ class HttpHardeningTest(unittest.TestCase):
 
     def test_t20_stalled_request_is_cut_off(self):
         with socket.create_connection(("127.0.0.1", self.server.server_port), timeout=5) as conn:
-            conn.sendall(b"POST /login HTTP/1.0\r\nContent-Length: 100\r\n\r\n{")
+            conn.sendall(b"POST /login HTTP/1.0\r\nContent-Type: application/json\r\nContent-Length: 100\r\n\r\n{")
             answer = conn.recv(4096)  # a stalled client gets an answer once the timeout fires; before, it hung
         self.assertIn(b" 408 ", answer.split(b"\r\n", 1)[0])
+
+    def test_t22_foreign_host_header_is_refused(self):
+        for host in ("evil.example", f"evil.example:{self.server.server_port}", "127.0.0.1.evil.example"):
+            with self.subTest(host=host):
+                status, _ = self.call("GET", "/health", headers={"Host": host})
+                self.assertEqual(status, 403)
+        status, _ = self.call("GET", "/health", headers={"Host": f"localhost:{self.server.server_port}"})
+        self.assertEqual(status, 200)
+
+    def test_t22_simple_cross_site_post_is_refused(self):
+        body = json.dumps({"username": "alice", "password": "learn-alice"}).encode()
+        for content_type in ("text/plain", "application/x-www-form-urlencoded", "multipart/form-data; boundary=x"):
+            with self.subTest(content_type=content_type):
+                status, _ = self.call("POST", "/login", body, {"Content-Type": content_type})
+                self.assertEqual(status, 415)
+        status, _ = self.call("POST", "/login", body, {"Content-Type": "application/json; charset=utf-8"})
+        self.assertEqual(status, 200)
 
     def test_t14_bad_content_length_is_400(self):
         status, body = self.call("POST", "/login", b"{}", {"Content-Length": "abc"})

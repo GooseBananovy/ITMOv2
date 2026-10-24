@@ -84,7 +84,7 @@ MUTANTS = [
     ("M27", "T20 нет таймаута сокета: зависший клиент держит поток",
      [("timeout = shop.request_timeout  # a client that stalls mid-request does not hold a thread forever", "pass")]),
     ("M28", "T20 сессии не чистятся и не ограничены",
-     [("        self.purge_sessions(now)\n", "")]),
+     [("        self.purge_sessions(now, username)\n", "")]),
     ("M29", "T20 отзывы не ограничены",
      [("del self.reviews[:-MAX_REVIEWS]", "pass")]),
     ("M30", "T20 журнал запросов не ограничен",
@@ -100,6 +100,18 @@ MUTANTS = [
      [('("GET", "/search"), ', "")]),
     ("M35", "T17 /assistant/context доступен без входа",
      [('("GET", "/assistant/context"), ', "")]),
+    ("M36", "T22 проверка Host снята (DNS rebinding)",
+     [('if host is not None and host not in', 'if False and host not in')]),
+    ("M37", "T22 Content-Type не проверяется (простой кросс-сайтовый POST)",
+     [('elif size and self.headers.get_content_type() != "application/json":', 'elif False:')]),
+    ("M38", "T20 таблица неудачных входов не ограничена",
+     [('if username not in self.failures and len(self.failures) >= MAX_TRACKED_NAMES:', 'if False:')]),
+    ("M39", "T13 лимит попыток только для существующих имён (оракул перечисления)",
+     [('if len(recent) >= LOGIN_ATTEMPTS:', 'if username in self.accounts and len(recent) >= LOGIN_ATTEMPTS:')]),
+    ("M40", "T20 лимит сессий общий: клиент вытесняет токен сотрудника",
+     [('own = [t for t, s in self.sessions.items() if s["user"] == user]', 'own = list(self.sessions)')]),
+    ("M41", "T21 пароль сравнивается как str: не-ASCII ломает вход",
+     [('hmac.compare_digest(password.encode(), account[0].encode())', 'hmac.compare_digest(password, account[0])')]),
 ]
 
 

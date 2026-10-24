@@ -16,7 +16,7 @@ M15 поймана: T11 export_profiles доступен клиенту — test
 M16 поймана: T12 delete_tree снова исполняется — test_t12_nobody_deletes_files_through_assistant
 M17 поймана: T03 контекст помощника для чужого заказа — test_t03_assistant_context_for_foreign_order_denied
 M18 поймана: T03 SQL строкой в /assistant/context — test_t03_assistant_order_id_is_not_sql
-M19 поймана: T13 нет лимита попыток входа — test_t13_failed_logins_are_rate_limited
+M19 поймана: T13 нет лимита попыток входа — test_t13_failed_logins_are_rate_limited, test_t13_unknown_names_are_limited_like_known_ones
 M20 поймана: T13 токен не истекает — test_t13_token_expires
 M21 поймана: T16 действия не попадают в журнал аудита — test_t16_actions_are_audited_without_secrets
 M22 поймана: T14 ошибки отдают текст исключения — test_t14_errors_do_not_leak_internals
@@ -25,7 +25,7 @@ M24 поймана: T15 логин не проверяет типы — test_t15
 M25 поймана: T15 заказ не проверяет тип product — test_t15_malformed_bodies_are_400_not_500
 M26 поймана: T12 execute принимает decision любой формы — test_t12_malformed_decision_is_400
 M27 поймана: T20 нет таймаута сокета: зависший клиент держит поток — test_t20_stalled_request_is_cut_off
-M28 поймана: T20 сессии не чистятся и не ограничены — test_t20_expired_sessions_are_purged, test_t20_sessions_are_bounded
+M28 поймана: T20 сессии не чистятся и не ограничены — test_t20_expired_sessions_are_purged, test_t20_sessions_are_bounded_per_account
 M29 поймана: T20 отзывы не ограничены — test_t20_reviews_are_bounded
 M30 поймана: T20 журнал запросов не ограничен — test_t20_request_log_is_bounded
 M31 поймана: T09 в prompt попадают отзывы всех товаров — test_t09_prompt_has_only_reviews_of_the_ordered_product
@@ -33,5 +33,11 @@ M32 поймана: T09 число отзывов в prompt не огранич�
 M33 поймана: T07 журнал хранит тела запросов (пароли из /login) — test_t07_debug_logs_not_public_and_without_secrets, test_t07_logs_hold_no_passwords_from_login_bodies
 M34 поймана: T17 /search доступен без входа — test_t17_search_and_assistant_context_require_login
 M35 поймана: T17 /assistant/context доступен без входа — test_t17_search_and_assistant_context_require_login
+M36 поймана: T22 проверка Host снята (DNS rebinding) — test_t22_foreign_host_header_is_refused
+M37 поймана: T22 Content-Type не проверяется (простой кросс-сайтовый POST) — test_t22_simple_cross_site_post_is_refused
+M38 поймана: T20 таблица неудачных входов не ограничена — test_t20_failed_login_tracking_is_bounded
+M39 поймана: T13 лимит попыток только для существующих имён (оракул перечисления) — test_t13_unknown_names_are_limited_like_known_ones
+M40 поймана: T20 лимит сессий общий: клиент вытесняет токен сотрудника — test_t20_one_customer_cannot_evict_the_staff_session
+M41 поймана: T21 пароль сравнивается как str: не-ASCII ломает вход — test_t21_non_ascii_password_is_401_not_500
 
-Поймано 35 из 35
+Поймано 41 из 41

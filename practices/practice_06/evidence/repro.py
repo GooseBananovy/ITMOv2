@@ -116,4 +116,9 @@ s, b = execute(alice, "delete_tree", path=".")
 s2, _ = call("GET", "/files?user=alice&path=receipt.txt", headers=alice)
 check("T19", "delete_tree удаляет корень песочницы", s == 200 and s2 != 200, f"удаление HTTP {s}, свой чек после: HTTP {s2}")
 
+s, _ = call("GET", "/health", headers={"Host": "evil.example"})
+check("T22a", "чужой заголовок Host принимается (DNS rebinding)", s == 200, f"HTTP {s}")
+s, _ = call("POST", "/login", raw=json.dumps({"username": "bob", "password": "learn-bob"}).encode(), headers={"Content-Type": "text/plain"})
+check("T22b", "простой кросс-сайтовый POST (text/plain) принимается", s == 200, f"HTTP {s}")
+
 print(f"\nПодтверждено: {sum(c for _, c in results)} из {len(results)} проверок (T16 журнал действий и T20 пределы памяти — только тестами)")
